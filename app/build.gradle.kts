@@ -48,9 +48,40 @@ if (project.hasProperty("bump")) {
     versionProps.store(versionPropsFile.writer(), "Version properties updated by Gradle")
 }
 
+val keystorePropsFile = rootProject.file("app/keystore.properties")
+val keystoreProps = Properties()
+if (keystorePropsFile.isFile) {
+    keystoreProps.load(FileInputStream(keystorePropsFile))
+}
+
+
 android {
     namespace = "com.leeweeder.greasethegroove"
     compileSdk = 36
+
+    signingConfigs {
+        create("release") {
+            // Only configure signing if the properties file exists
+            if (keystorePropsFile.isFile) {
+                storeFile = file(keystoreProps["storeFile"].toString())
+                storePassword = keystoreProps["storePassword"].toString()
+                keyAlias = keystoreProps["keyAlias"].toString()
+                keyPassword = keystoreProps["keyPassword"].toString()
+            } else {
+                // This else block prevents build failures on machines that don't
+                // have the keystore (e.g., a CI server doing a debug build).
+                println("Signing config not found. Using debug signing for release builds.")
+                // Fallback to the debug keystore for local "release" builds if needed.
+                // This is optional but good practice.
+                getByName("debug").let {
+                    storeFile = it.storeFile
+                    storePassword = it.storePassword
+                    keyAlias = it.keyAlias
+                    keyPassword = it.keyPassword
+                }
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "com.leeweeder.greasethegroove"
