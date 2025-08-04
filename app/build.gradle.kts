@@ -8,15 +8,15 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.compose)
 }
 
-val versionPropsFile = file("version.properties")
+val versionPropsFile = rootProject.file("version.properties")
 val versionProps = Properties()
 if (versionPropsFile.isFile) {
     versionProps.load(FileInputStream(versionPropsFile))
 } else {
     // Provide default values if the file doesn't exist yet
-    versionProps["VERSION_MAJOR"] = "1"
+    versionProps["VERSION_MAJOR"] = "0"
     versionProps["VERSION_MINOR"] = "0"
-    versionProps["VERSION_PATCH"] = "0"
+    versionProps["VERSION_PATCH"] = "1"
 }
 
 var major = versionProps["VERSION_MAJOR"].toString().toInt()
@@ -48,7 +48,7 @@ if (project.hasProperty("bump")) {
     versionProps.store(versionPropsFile.writer(), "Version properties updated by Gradle")
 }
 
-val keystorePropsFile = rootProject.file("app/keystore.properties")
+val keystorePropsFile = rootProject.file("key.properties")
 val keystoreProps = Properties()
 if (keystorePropsFile.isFile) {
     keystoreProps.load(FileInputStream(keystorePropsFile))
@@ -94,6 +94,8 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        signingConfig = signingConfigs.getByName("release")
     }
 
     buildTypes {
