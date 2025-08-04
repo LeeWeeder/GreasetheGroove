@@ -1,4 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.FileInputStream
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -6,21 +8,94 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.compose)
 }
 
+val versionPropsFile = rootProject.file("version.properties")
+val versionProps = Properties()
+if (versionPropsFile.isFile) {
+    versionProps.load(FileInputStream(versionPropsFile))
+} else {
+    // Provide default values if the file doesn't exist yet
+    versionProps["VERSION_MAJOR"] = "0"
+    versionProps["VERSION_MINOR"] = "0"
+    versionProps["VERSION_PATCH"] = "1"
+}
+
+var major = versionProps["VERSION_MAJOR"].toString().toInt()
+var minor = versionProps["VERSION_MINOR"].toString().toInt()
+var patch = versionProps["VERSION_PATCH"].toString().toInt()
+
+if (project.hasProperty("bump")) {
+    when (project.property("bump")) {
+        "major" -> {
+            major++
+            minor = 0
+            patch = 0
+        }
+        "minor" -> {
+            minor++
+            patch = 0
+        }
+        "patch" -> {
+            patch++
+        }
+    }
+
+    // 4. Update the properties object with the new values
+    versionProps["VERSION_MAJOR"] = major.toString()
+    versionProps["VERSION_MINOR"] = minor.toString()
+    versionProps["VERSION_PATCH"] = patch.toString()
+
+    // 5. Write the new version back to the file
+    versionProps.store(versionPropsFile.writer(), "Version properties updated by Gradle")
+}
+
+val keystorePropsFile = rootProject.file("key.properties")
+val keystoreProps = Properties()
+if (keystorePropsFile.isFile) {
+    keystoreProps.load(FileInputStream(keystorePropsFile))
+}
+
+
 android {
     namespace = "com.leeweeder.greasethegroove"
     compileSdk = 36
+
+    signingConfigs {
+        create("release") {
+            // Only configure signing if the properties file exists
+            if (keystorePropsFile.isFile) {
+                storeFile = file(keystoreProps["storeFile"].toString())
+                storePassword = keystoreProps["storePassword"].toString()
+                keyAlias = keystoreProps["keyAlias"].toString()
+                keyPassword = keystoreProps["keyPassword"].toString()
+            } else {
+                // This else block prevents build failures on machines that don't
+                // have the keystore (e.g., a CI server doing a debug build).
+                println("Signing config not found. Using debug signing for release builds.")
+                // Fallback to the debug keystore for local "release" builds if needed.
+                // This is optional but good practice.
+                getByName("debug").let {
+                    storeFile = it.storeFile
+                    storePassword = it.storePassword
+                    keyAlias = it.keyAlias
+                    keyPassword = it.keyPassword
+                }
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "com.leeweeder.greasethegroove"
         minSdk = 35
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = (major * 1_000_000) + (minor * 1_000) + patch
+        versionName = "$major.$minor.$patch"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        signingConfig = signingConfigs.getByName("release")
     }
 
     buildTypes {
@@ -28,9 +103,11 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             )
+        }
+        debug {
+            applicationIdSuffix = ".debug"
         }
     }
     compileOptions {
