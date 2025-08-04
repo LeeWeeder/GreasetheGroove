@@ -1,6 +1,7 @@
 package com.leeweeder.greasethegroove.ui.screen
 
 import android.Manifest
+import android.R.attr.duration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -97,8 +99,8 @@ fun WorkoutScreen(viewModel: WorkoutViewModel = koinViewModel()) {
 fun InitialSetupDialog(onConfirm: (String, Int, Int) -> Unit) {
     var exerciseName by remember { mutableStateOf("") }
     var maxReps by remember { mutableStateOf("") }
-    var restDuration by remember { mutableStateOf("") }
-    var step by remember { mutableStateOf(1) }
+    var restDuration by remember { mutableFloatStateOf(30f) }
+    var step by remember { mutableIntStateOf(1) }
 
     val onConfirmClicked = {
         when (step) {
@@ -106,8 +108,7 @@ fun InitialSetupDialog(onConfirm: (String, Int, Int) -> Unit) {
             2 -> if (maxReps.toIntOrNull() != null) step = 3
             3 -> {
                 val reps = maxReps.toIntOrNull()
-                val duration = restDuration.toIntOrNull()
-                if (reps != null && duration != null && duration in 30..120) {
+                if (reps != null) {
                     onConfirm(exerciseName, reps, duration)
                 }
             }
@@ -119,9 +120,9 @@ fun InitialSetupDialog(onConfirm: (String, Int, Int) -> Unit) {
         title = {
             Text(
                 when (step) {
-                    1 -> "Track New Exercise"
-                    2 -> "Set Max Reps"
-                    else -> "Set Rest Time (30-120 mins)"
+                    1 -> "Track new exercise"
+                    2 -> "Set max reps"
+                    else -> "Set rest time"
                 }
             )
         },
@@ -131,22 +132,25 @@ fun InitialSetupDialog(onConfirm: (String, Int, Int) -> Unit) {
                     OutlinedTextField(
                         value = exerciseName,
                         onValueChange = { exerciseName = it },
-                        label = { Text("Exercise Name") })
+                        label = { Text("Exercise name") })
                 }
                 if (step == 2) {
                     OutlinedTextField(
                         value = maxReps,
                         onValueChange = { maxReps = it },
-                        label = { Text("Max Reps") },
+                        label = { Text("Max reps") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
                 if (step == 3) {
-                    OutlinedTextField(
+                    Text("${restDuration.toInt()} minutes")
+                    Slider(
                         value = restDuration,
-                        onValueChange = { restDuration = it },
-                        label = { Text("Rest in Minutes") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        onValueChange = {
+                            restDuration = it
+                        },
+                        valueRange = 30f..120f,
+                        steps = 2
                     )
                 }
             }
@@ -169,9 +173,11 @@ fun WorkoutDisplay(exerciseName: String, currentReps: Int, onSetComplete: () -> 
         Text(exerciseName, style = MaterialTheme.typography.headlineMedium)
         Text("$currentReps reps", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(32.dp))
-        Button(onClick = onSetComplete, modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp)) {
+        Button(
+            onClick = onSetComplete, modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+        ) {
             Text("I'm Done!")
         }
     }
