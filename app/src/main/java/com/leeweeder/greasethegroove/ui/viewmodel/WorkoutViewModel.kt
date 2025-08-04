@@ -11,10 +11,10 @@ import com.leeweeder.greasethegroove.data.repository.WorkoutState
 import com.leeweeder.greasethegroove.domain.usecase.AdjustRepsUseCase
 import com.leeweeder.greasethegroove.domain.usecase.CalculateRepsUseCase
 import com.leeweeder.greasethegroove.worker.NotificationWorker
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.TimeUnit
 
 class WorkoutViewModel(
@@ -31,8 +31,6 @@ class WorkoutViewModel(
         viewModelScope.launch {
             val initialReps = calculateRepsUseCase(maxReps, restDuration)
             repository.saveInitialWorkout(exerciseName, maxReps, restDuration, initialReps)
-            // Schedule the very first notification
-            scheduleNextNotification(restDuration, exerciseName, initialReps)
         }
     }
 
@@ -40,13 +38,20 @@ class WorkoutViewModel(
         viewModelScope.launch {
             val currentState = workoutState.value ?: return@launch
             val newReps = adjustRepsUseCase(currentState.currentReps, rpe)
-            repository.updateCurrentReps(newReps)
-            // Schedule the next notification
+
+            // Use java.time.Duration for type-safe calculation.
+            val restDuration = Duration.ofMinutes(currentState.restDuration.toLong())
+            // Calculate the future Instant.
+            val newRestEndTime = Instant.now().plus(restDuration)
+
+            repository.updateAfterSetCompletion(newReps, newRestEndTime)
+
             scheduleNextNotification(currentState.restDuration, currentState.exerciseName, newReps)
         }
     }
 
     private fun scheduleNextNotification(delayInMinutes: Int, exerciseName: String, reps: Int) {
+        // ... (This function remains unchanged as WorkManager uses Long)
         val data = Data.Builder()
             .putString(NotificationWorker.KEY_EXERCISE_NAME, exerciseName)
             .putInt(NotificationWorker.KEY_REPS, reps)
@@ -62,9 +67,5 @@ class WorkoutViewModel(
             ExistingWorkPolicy.REPLACE,
             notificationWorkRequest
         )
-    }
-
-    fun cancelNotifications() {
-        workManager.cancelUniqueWork(NotificationWorker.WORK_NAME)
     }
 }
