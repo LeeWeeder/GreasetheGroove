@@ -10,12 +10,16 @@ android {
     namespace = "com.leeweeder.greasethegroove"
     compileSdk = 36
 
+    val major = 0
+    val minor = 0
+    val patch = 1
+
     defaultConfig {
         applicationId = "com.leeweeder.greasethegroove"
         minSdk = 35
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = (major * 1_000_000) + (minor * 1_000) + patch
+        versionName = "$major.$minor.$patch"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -28,8 +32,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             )
         }
         debug {
