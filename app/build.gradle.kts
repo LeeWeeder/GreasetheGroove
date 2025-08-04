@@ -1,4 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.FileInputStream
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -6,13 +8,49 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.compose)
 }
 
+val versionPropsFile = file("version.properties")
+val versionProps = Properties()
+if (versionPropsFile.isFile) {
+    versionProps.load(FileInputStream(versionPropsFile))
+} else {
+    // Provide default values if the file doesn't exist yet
+    versionProps["VERSION_MAJOR"] = "1"
+    versionProps["VERSION_MINOR"] = "0"
+    versionProps["VERSION_PATCH"] = "0"
+}
+
+var major = versionProps["VERSION_MAJOR"].toString().toInt()
+var minor = versionProps["VERSION_MINOR"].toString().toInt()
+var patch = versionProps["VERSION_PATCH"].toString().toInt()
+
+if (project.hasProperty("bump")) {
+    when (project.property("bump")) {
+        "major" -> {
+            major++
+            minor = 0
+            patch = 0
+        }
+        "minor" -> {
+            minor++
+            patch = 0
+        }
+        "patch" -> {
+            patch++
+        }
+    }
+
+    // 4. Update the properties object with the new values
+    versionProps["VERSION_MAJOR"] = major.toString()
+    versionProps["VERSION_MINOR"] = minor.toString()
+    versionProps["VERSION_PATCH"] = patch.toString()
+
+    // 5. Write the new version back to the file
+    versionProps.store(versionPropsFile.writer(), "Version properties updated by Gradle")
+}
+
 android {
     namespace = "com.leeweeder.greasethegroove"
     compileSdk = 36
-
-    val major = 0
-    val minor = 0
-    val patch = 1
 
     defaultConfig {
         applicationId = "com.leeweeder.greasethegroove"
